@@ -1,0 +1,18 @@
+{
+  "uuid": "af2c11e9-140d-40e4-96af-f2b4918a2fb6",
+  "shortName": "Slow Time",
+  "longName": "Slow Time",
+  "companyName": "Staffan Thomen",
+  "versionLabel": "1.0",
+  "sdkVersion": "3",
+  "targetPlatforms": ["aplite", "basalt"],
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
