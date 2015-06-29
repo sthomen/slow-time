@@ -7,22 +7,24 @@ Layer *layer_arm;
 
 struct tm *now=NULL;
 
-struct {
+struct _gpath {
 	GPath *path;
 	const GPathInfo path_info;
-	struct {
-		int x;
-		int y;
-	} offsets;
-} arm = {
+};
+
+struct _gpath arm = {
 	NULL,
 	{
 		.num_points = 5,
-		.points = (GPoint[]){{0,0}, {10,0}, {10, 20}, {5, 72}, {0, 20}}
-	},
+		.points = (GPoint[]){{-6,-10}, {6,-10}, {6, 10}, {0, 72}, {-6, 10}}
+	}
+};
+
+struct _gpath wide_line = {
+	NULL,
 	{
-		5,
-		10
+		.num_points = 4,
+		.points = (GPoint[]){{-1,0}, {1,0}, {1,10}, {-1,10}}
 	}
 };
 
@@ -45,7 +47,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 
 static void layer_arm_update(Layer *this, GContext *ctx)
 {
-	int total_minutes=0;
+	int16_t total_minutes=0;
 	GRect bounds;
 
 	bounds=layer_get_bounds(this);
@@ -54,18 +56,20 @@ static void layer_arm_update(Layer *this, GContext *ctx)
 		total_minutes=now->tm_hour * 60 + now->tm_min;
 	}
 
-	DEBUG_INFO("total_minutes=%d, angle=%d", total_minutes, (TRIG_MAX_ANGLE / 1500 * total_minutes));
-
-	gpath_rotate_to(arm.path, TRIG_MAX_ANGLE / 1500 *  total_minutes);
-	gpath_move_to(arm.path, GPoint((bounds.size.w/2)-arm.offsets.x, (bounds.size.h/2)-arm.offsets.y));
+	gpath_rotate_to(arm.path, TRIG_MAX_ANGLE / 1440 *  total_minutes);
+	gpath_move_to(arm.path, GPoint(bounds.size.w/2, bounds.size.h/2));
 
 #ifdef PBL_COLOR
 	graphics_context_set_fill_color(ctx, GColorDarkGray);
-	gpath_draw_filled(ctx, arm.path);
+#else
+	graphics_context_set_fill_color(ctx, GColorWhite);
 #endif
-
 	graphics_context_set_stroke_color(ctx, GColorBlack);
+
+	gpath_draw_filled(ctx, arm.path);
 	gpath_draw_outline(ctx, arm.path);
+	graphics_fill_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
+	graphics_draw_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
 }
 
 /************************************************************************
