@@ -4,7 +4,8 @@
 #include "gpaths.h"
 
 Window *window_main;
-Layer *layer_watchface;
+GBitmap *watch_back;
+BitmapLayer *layer_watchface;
 Layer *layer_arm;
 
 struct tm *now=NULL;
@@ -43,44 +44,19 @@ static void layer_arm_update(Layer *this, GContext *ctx)
 #ifdef PBL_COLOR
 	graphics_context_set_fill_color(ctx, GColorDarkGray);
 #else
-	graphics_context_set_fill_color(ctx, GColorWhite);
+	graphics_context_set_fill_color(ctx, GColorBlack);
 #endif
 	graphics_context_set_stroke_color(ctx, GColorBlack);
 
 	gpath_draw_filled(ctx, arm.path);
+
+#ifdef PBL_COLOR
 	gpath_draw_outline(ctx, arm.path);
+#else
+	graphics_context_set_fill_color(ctx, GColorWhite);
+#endif
 	graphics_fill_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
 	graphics_draw_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
-}
-
-/************************************************************************
- * Watchface
- ***********************************************************************/
-
-static void layer_watchface_update(Layer *this, GContext *ctx)
-{
-	GPath *path;
-	int i;
-	GRect bounds;
-
-	bounds=layer_get_bounds(this);
-
-	graphics_context_set_fill_color(ctx, GColorBlack);
-	graphics_context_set_stroke_color(ctx, GColorBlack);
-
-	for (i=0;i<96;i++) {	/* 24 hours * 1 broad + 3 thin = 96 */
-		if (i % 4 == 0) {
-			path=wide_line.path;
-		} else {
-			path=thin_line.path;
-		}
-
-		gpath_rotate_to(path, TRIG_MAX_ANGLE / 96 * i);
-		gpath_move_to(path, GPoint(bounds.size.w/2, bounds.size.h/2));
-
-		gpath_draw_filled(ctx, path);
-		gpath_draw_outline(ctx, path);
-	}
 }
 
 /************************************************************************
@@ -104,9 +80,10 @@ static void window_main_load(Window *window)
 
 	/* watchface */
 
-	layer_watchface=layer_create(bounds);
-	layer_add_child(root, layer_watchface);
-	layer_set_update_proc(layer_watchface, layer_watchface_update);
+	layer_watchface=bitmap_layer_create(bounds);
+	layer_add_child(root, bitmap_layer_get_layer(layer_watchface));
+	watch_back=gbitmap_create_with_resource(RESOURCE_ID_WATCH_BACK);
+	bitmap_layer_set_bitmap(layer_watchface, watch_back);
 
 	/* arm */
 
@@ -118,7 +95,8 @@ static void window_main_load(Window *window)
 static void window_main_unload(Window *window)
 {
 	layer_destroy(layer_arm);
-	layer_destroy(layer_watchface);
+	bitmap_layer_destroy(layer_watchface);
+	gbitmap_destroy(watch_back);
 
 	/* clean up gpaths */
 
