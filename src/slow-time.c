@@ -59,7 +59,28 @@ static void layer_arm_update(Layer *this, GContext *ctx)
 
 static void layer_watchface_update(Layer *this, GContext *ctx)
 {
-	
+	GPath *path;
+	int i;
+	GRect bounds;
+
+	bounds=layer_get_bounds(this);
+
+	graphics_context_set_fill_color(ctx, GColorBlack);
+	graphics_context_set_stroke_color(ctx, GColorBlack);
+
+	for (i=0;i<96;i++) {	/* 24 hours * 1 broad + 3 thin = 96 */
+		if (i % 4 == 0) {
+			path=wide_line.path;
+		} else {
+			path=thin_line.path;
+		}
+
+		gpath_rotate_to(path, TRIG_MAX_ANGLE / 96 * i);
+		gpath_move_to(path, GPoint(bounds.size.w/2, bounds.size.h/2));
+
+		gpath_draw_filled(ctx, path);
+		gpath_draw_outline(ctx, path);
+	}
 }
 
 /************************************************************************
@@ -75,6 +96,12 @@ static void window_main_load(Window *window)
 
 	bounds = layer_get_bounds(root);
 
+	/* create gpaths */
+
+	arm.path=gpath_create(&arm.path_info);
+	wide_line.path=gpath_create(&wide_line.path_info);
+	thin_line.path=gpath_create(&thin_line.path_info);
+
 	/* watchface */
 
 	layer_watchface=layer_create(bounds);
@@ -82,8 +109,6 @@ static void window_main_load(Window *window)
 	layer_set_update_proc(layer_watchface, layer_watchface_update);
 
 	/* arm */
-
-	arm.path=gpath_create(&arm.path_info);
 
 	layer_arm = layer_create(bounds);
 	layer_add_child(root, layer_arm);
@@ -94,6 +119,12 @@ static void window_main_unload(Window *window)
 {
 	layer_destroy(layer_arm);
 	layer_destroy(layer_watchface);
+
+	/* clean up gpaths */
+
+	gpath_destroy(arm.path);
+	gpath_destroy(wide_line.path);
+	gpath_destroy(thin_line.path);
 }
 
 /************************************************************************

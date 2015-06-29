@@ -18,7 +18,7 @@ struct _gpath wide_line = {
 	NULL,
 	{
 		.num_points = 4,
-		.points = (GPoint[]){{-1,0}, {1,0}, {1,10}, {-1,10}}
+		.points = (GPoint[]){{-2,65}, {2,65}, {2,72}, {-2,72}}
 	}
 };
 
@@ -26,7 +26,7 @@ struct _gpath thin_line = {
 	NULL,
 	{
 		.num_points = 2,
-		.points = (GPoint[]){{0,0}, {0,10}}
+		.points = (GPoint[]){{0,65}, {0,72}}
 	}
 };
 
