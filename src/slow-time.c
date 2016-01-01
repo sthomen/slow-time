@@ -9,7 +9,9 @@
 #define POINTER_WIDTH 30
 #define POINTER_HEIGHT 15
 
-#define FONT fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD)
+#define NUMERAL_OFFSET 10
+
+#define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 
 Window *window_main;
 GRect bounds;			// holds the window bounds for dynamic size (high-res pebbles?)
@@ -58,17 +60,55 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 
 static void update_background(Layer *this, GContext *ctx)
 {
+	int i;
+	GSize ts;
+	GRect bb;
+
+	struct {
+		char *text;
+		GPoint position;
+	} numerals[] = {
+		{ "0", { center.x, center.y+TRACK_INNER-NUMERAL_OFFSET } },
+		{ "6", { center.x-TRACK_INNER+NUMERAL_OFFSET, center.y } },
+		{ "12", { center.x, center.y-TRACK_INNER+NUMERAL_OFFSET } },
+		{ "18", { center.x+TRACK_INNER-NUMERAL_OFFSET, center.y } }
+	};
+
 	// draw background
 	graphics_context_set_fill_color(ctx, GColorBlack);
 	graphics_fill_rect(ctx, bounds, 0, 0);
 
 	// draw track
-	// XXX assuming width is smaller than height
 	graphics_context_set_fill_color(ctx, GColorWhite);
 	graphics_fill_circle(ctx, center, TRACK_OUTER);
 
 	graphics_context_set_fill_color(ctx, GColorBlack);
 	graphics_fill_circle(ctx, center, TRACK_INNER);
+
+	// draw numerals
+	graphics_context_set_text_color(ctx, GColorWhite);
+
+	i=0;
+	do {
+		ts=graphics_text_layout_get_content_size(numerals[i].text,
+			FONT,
+			bounds,
+			GTextOverflowModeWordWrap,
+			GTextAlignmentCenter);
+
+		/* XXX	magic number 1.5 because the font is aligned along the baseline, and this
+		 *	brings the Y pos up a little to center the numbers.
+		 */
+		bb=GRect(numerals[i].position.x-(ts.w/2),numerals[i].position.y-(ts.h/(1.5)),ts.w,ts.h);
+
+		graphics_draw_text(ctx,
+			numerals[i].text,
+			FONT,
+			bb,
+			GTextOverflowModeWordWrap, /* don't care */
+			GTextAlignmentCenter,
+			NULL);
+	} while (++i < 4);
 }
 
 static void update_pointer(Layer *this, GContext *ctx)
