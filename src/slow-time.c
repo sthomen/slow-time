@@ -2,16 +2,19 @@
 
 #include "debug.h"
 
+// values in pixels
 #define TRACK_WIDTH 20
 #define TRACK_OUTER center.x
 #define TRACK_INNER (center.x-TRACK_WIDTH)
 
 #define POINTER_WIDTH 30
-#define POINTER_HEIGHT 15
+#define POINTER_HEIGHT 20
 
 #define NUMERAL_OFFSET 10
 
 #define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
+#define MINUTES_HEIGHT 40
+#define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK)
 
 Window *window_main;
 GRect bounds;			// holds the window bounds for dynamic size (high-res pebbles?)
@@ -19,9 +22,12 @@ GPoint center;
 
 BitmapLayer *layer_background;
 BitmapLayer *layer_pointer;
+TextLayer *layer_minutes;
 
 GPath *path_triangle=NULL;
 GPathInfo *path_triangle_info;
+
+char minute_string[3];
 
 struct tm now;
 
@@ -56,6 +62,8 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 	memcpy(&now, tick_time, sizeof(struct tm));
 
 	layer_mark_dirty(bitmap_layer_get_layer(layer_pointer));
+
+	snprintf(minute_string, 3, "%2d", now.tm_min);
 }
 
 static void update_background(Layer *this, GContext *ctx)
@@ -136,8 +144,10 @@ static void update_pointer(Layer *this, GContext *ctx)
 
 static void window_main_load(Window *window)
 {
-	time_t t;
 	Layer *root;
+
+	time_t t;
+	GSize ts;
 
 	root=window_get_root_layer(window_main);
 
@@ -159,12 +169,31 @@ static void window_main_load(Window *window)
 	layer_pointer=bitmap_layer_create(bounds);
 	layer_add_child(root, bitmap_layer_get_layer(layer_pointer));
 	layer_set_update_proc(bitmap_layer_get_layer(layer_pointer), update_pointer);
+
+	// set up minutes layer
+
+	// Measure the biggest probable numbers for this variable-size font
+	ts=graphics_text_layout_get_content_size("00",
+		FONT_MINUTES,
+		bounds,
+		GTextOverflowModeWordWrap,
+		GTextAlignmentCenter);
+
+	layer_minutes=text_layer_create(GRect(0,center.y-(ts.h/1.5), bounds.size.w, ts.h));
+	layer_add_child(root, text_layer_get_layer(layer_minutes));
+
+	text_layer_set_text_alignment(layer_minutes, GTextAlignmentCenter);
+	text_layer_set_font(layer_minutes, FONT_MINUTES);
+	text_layer_set_background_color(layer_minutes, GColorClear);
+	text_layer_set_text_color(layer_minutes, GColorWhite);
+	text_layer_set_text(layer_minutes, minute_string);
 }
 
 static void window_main_unload(Window *window)
 {
 	bitmap_layer_destroy(layer_background);
 	bitmap_layer_destroy(layer_pointer);
+	text_layer_destroy(layer_minutes);
 }
 
 /************************************************************************
