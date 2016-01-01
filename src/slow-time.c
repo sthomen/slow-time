@@ -10,7 +10,8 @@
 #define POINTER_WIDTH 30
 #define POINTER_HEIGHT 18
 
-#define NUMERAL_OFFSET 10
+#define MINUTES_MAGIC_NUMBER 1.5
+#define DATE_MAGIC_NUMBER 3
 
 #define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 #define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD)
@@ -143,7 +144,7 @@ static void window_main_load(Window *window)
 		GTextOverflowModeWordWrap,
 		GTextAlignmentCenter);
 
-	layer_minutes=text_layer_create(GRect(0,center.y-(ms.h/1.5), bounds.size.w, ms.h));
+	layer_minutes=text_layer_create(GRect(0,center.y-(ms.h/MINUTES_MAGIC_NUMBER), bounds.size.w, ms.h));
 	layer_add_child(root, text_layer_get_layer(layer_minutes));
 
 	text_layer_set_text_alignment(layer_minutes, GTextAlignmentCenter);
@@ -159,7 +160,7 @@ static void window_main_load(Window *window)
 		GTextOverflowModeWordWrap,
 		GTextAlignmentCenter);
 
-	layer_date=text_layer_create(GRect(0,center.y+(ms.h/3), bounds.size.w, ds.h));
+	layer_date=text_layer_create(GRect(0,center.y+(ms.h/DATE_MAGIC_NUMBER), bounds.size.w, ds.h));
 	layer_add_child(root, text_layer_get_layer(layer_date));
 
 	text_layer_set_text_alignment(layer_date, GTextAlignmentCenter);
