@@ -1,62 +1,93 @@
 #include <pebble.h>
 
 #include "debug.h"
-#include "gpaths.h"
+
+#define TRACK_WIDTH 20
+#define TRACK_OUTER center.x
+#define TRACK_INNER (center.x-TRACK_WIDTH)
+
+#define POINTER_WIDTH 30
+#define POINTER_HEIGHT 15
+
+#define FONT fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD)
 
 Window *window_main;
-GBitmap *watch_back;
-BitmapLayer *layer_watchface;
-Layer *layer_arm;
+GRect bounds;			// holds the window bounds for dynamic size (high-res pebbles?)
+GPoint center;
 
-struct tm *now=NULL;
+BitmapLayer *layer_background;
+BitmapLayer *layer_pointer;
+
+GPath *path_triangle=NULL;
+GPathInfo *path_triangle_info;
+
+struct tm now;
 
 /************************************************************************
- * Time
+ * Utility
+ ***********************************************************************/
+
+static GPathInfo *generate_offset_pointer()
+{
+	GPathInfo *path=malloc(sizeof(GPathInfo));
+	path->num_points=3;
+	path->points=malloc(sizeof(GPoint)*3);
+
+	path->points[0].x=0;
+	path->points[0].y=TRACK_INNER;
+
+	path->points[1].x=-(POINTER_WIDTH/2);
+	path->points[1].y=TRACK_INNER+POINTER_HEIGHT;
+
+	path->points[2].x=POINTER_WIDTH/2;
+	path->points[2].y=TRACK_INNER+POINTER_HEIGHT;
+
+	return path;
+}
+
+/************************************************************************
+ * Callbacks
  ***********************************************************************/
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 {
-	now=tick_time;
+	memcpy(&now, tick_time, sizeof(struct tm));
 
-	if (units_changed & MINUTE_UNIT) {
-		layer_mark_dirty(layer_arm);
-	}
+	layer_mark_dirty(bitmap_layer_get_layer(layer_pointer));
 }
 
-/************************************************************************
- * Arm
- ***********************************************************************/
-
-static void layer_arm_update(Layer *this, GContext *ctx)
+static void update_background(Layer *this, GContext *ctx)
 {
-	int16_t total_minutes=0;
-	GRect bounds;
-
-	bounds=layer_get_bounds(this);
-
-	if (now!=NULL) {
-		total_minutes=now->tm_hour * 60 + now->tm_min;
-	}
-
-	gpath_rotate_to(arm.path, TRIG_MAX_ANGLE / 1440 *  total_minutes);
-	gpath_move_to(arm.path, GPoint(bounds.size.w/2, bounds.size.h/2));
-
-#ifdef PBL_COLOR
-	graphics_context_set_fill_color(ctx, GColorDarkGray);
-#else
+	// draw background
 	graphics_context_set_fill_color(ctx, GColorBlack);
-#endif
-	graphics_context_set_stroke_color(ctx, GColorBlack);
+	graphics_fill_rect(ctx, bounds, 0, 0);
 
-	gpath_draw_filled(ctx, arm.path);
-
-#ifdef PBL_COLOR
-	gpath_draw_outline(ctx, arm.path);
-#else
+	// draw track
+	// XXX assuming width is smaller than height
 	graphics_context_set_fill_color(ctx, GColorWhite);
-#endif
-	graphics_fill_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
-	graphics_draw_circle(ctx, GPoint(bounds.size.w/2, bounds.size.h/2), 7);
+	graphics_fill_circle(ctx, center, TRACK_OUTER);
+
+	graphics_context_set_fill_color(ctx, GColorBlack);
+	graphics_fill_circle(ctx, center, TRACK_INNER);
+}
+
+static void update_pointer(Layer *this, GContext *ctx)
+{
+	int total_minutes;
+
+	total_minutes=now.tm_hour * 60 + now.tm_min;
+
+	if (path_triangle != NULL)
+		gpath_destroy(path_triangle);
+
+	path_triangle=gpath_create(path_triangle_info);
+
+	graphics_context_set_fill_color(ctx, GColorBlack);
+
+	gpath_rotate_to(path_triangle, TRIG_MAX_ANGLE / 1440 * total_minutes);
+	gpath_move_to(path_triangle, center);
+
+	gpath_draw_filled(ctx, path_triangle);
 }
 
 /************************************************************************
@@ -65,44 +96,35 @@ static void layer_arm_update(Layer *this, GContext *ctx)
 
 static void window_main_load(Window *window)
 {
+	time_t t;
 	Layer *root;
-	GRect bounds;
 
 	root=window_get_root_layer(window_main);
 
-	bounds = layer_get_bounds(root);
+	// load window size
+	bounds=layer_get_bounds(root);
+	center=GPoint(bounds.size.w/2, bounds.size.h/2);
+	// XXX this must be run after center is initialized
+	path_triangle_info=generate_offset_pointer();
 
-	/* create gpaths */
+	t=time(NULL);
+	memcpy(&now, localtime(&t), sizeof(struct tm));
 
-	arm.path=gpath_create(&arm.path_info);
-	wide_line.path=gpath_create(&wide_line.path_info);
-	thin_line.path=gpath_create(&thin_line.path_info);
+	// set up background
+	layer_background=bitmap_layer_create(bounds);
+	layer_add_child(root, bitmap_layer_get_layer(layer_background));
+	layer_set_update_proc(bitmap_layer_get_layer(layer_background), update_background);
 
-	/* watchface */
-
-	layer_watchface=bitmap_layer_create(bounds);
-	layer_add_child(root, bitmap_layer_get_layer(layer_watchface));
-	watch_back=gbitmap_create_with_resource(RESOURCE_ID_WATCH_BACK);
-	bitmap_layer_set_bitmap(layer_watchface, watch_back);
-
-	/* arm */
-
-	layer_arm = layer_create(bounds);
-	layer_add_child(root, layer_arm);
-	layer_set_update_proc(layer_arm, layer_arm_update);
+	// set up pointer layer
+	layer_pointer=bitmap_layer_create(bounds);
+	layer_add_child(root, bitmap_layer_get_layer(layer_pointer));
+	layer_set_update_proc(bitmap_layer_get_layer(layer_pointer), update_pointer);
 }
 
 static void window_main_unload(Window *window)
 {
-	layer_destroy(layer_arm);
-	bitmap_layer_destroy(layer_watchface);
-	gbitmap_destroy(watch_back);
-
-	/* clean up gpaths */
-
-	gpath_destroy(arm.path);
-	gpath_destroy(wide_line.path);
-	gpath_destroy(thin_line.path);
+	bitmap_layer_destroy(layer_background);
+	bitmap_layer_destroy(layer_pointer);
 }
 
 /************************************************************************
@@ -111,8 +133,6 @@ static void window_main_unload(Window *window)
 
 static void init()
 {
-	time_t t;
-
 	static WindowHandlers window_handlers={
 		.load = window_main_load,
 		.unload = window_main_unload
@@ -123,16 +143,12 @@ static void init()
 	window_stack_push(window_main, true);
 
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-
-	t=time(NULL);
-	now=localtime(&t);
 }
 
 static void deinit()
 {
 	window_destroy(window_main);
 	tick_timer_service_unsubscribe();
-	free(now);
 }
 
 int main(void)
