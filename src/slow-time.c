@@ -13,8 +13,7 @@
 #define NUMERAL_OFFSET 10
 
 #define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
-#define MINUTES_HEIGHT 40
-#define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK)
+#define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD)
 
 Window *window_main;
 GRect bounds;			// holds the window bounds for dynamic size (high-res pebbles?)
@@ -63,7 +62,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 
 	layer_mark_dirty(bitmap_layer_get_layer(layer_pointer));
 
-	snprintf(minute_string, 3, "%2d", now.tm_min);
+	snprintf(minute_string, 3, "%.2d", now.tm_min);
 }
 
 static void update_background(Layer *this, GContext *ctx)
