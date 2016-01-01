@@ -2,7 +2,10 @@
 
 #include "debug.h"
 
-// values in pixels
+/* Values in pixels.
+ * XXX Always use parens when the values are calculations or there may be
+ * arithmetic ordering issues.
+ */
 #define TRACK_WIDTH 20
 #define TRACK_OUTER center.x
 #define TRACK_INNER (center.x-TRACK_WIDTH)
@@ -13,7 +16,10 @@
 #define MINUTES_MAGIC_NUMBER 1.5
 #define DATE_MAGIC_NUMBER 3
 
+#define HOUR_OFFSET (TRACK_INNER-10)
+
 #define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
+#define FONT_HOUR fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 #define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD)
 #define FONT_DATE fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 
@@ -23,14 +29,16 @@ GPoint center;
 
 BitmapLayer *layer_background;
 BitmapLayer *layer_pointer;
+TextLayer *layer_hour;
 TextLayer *layer_minutes;
 TextLayer *layer_date;
 
 GPath *path_triangle=NULL;
 GPathInfo *path_triangle_info;
 
-char minute_string[3];	// two digits and null
-char date_string[7];	// three characters, space two digits and null
+char hour_string[3];		// two digits and null
+char minute_string[3];		// two digits and null
+char date_string[7];		// three characters, space two digits and null
 
 struct tm now;
 
@@ -60,14 +68,27 @@ static GPathInfo *generate_offset_pointer()
  * Callbacks
  ***********************************************************************/
 
+static void update_hours_position() {
+	GRect position=layer_get_bounds(text_layer_get_layer(layer_hour));
+	int32_t angle=TRIG_MAX_ANGLE * (now.tm_hour * 60 + now.tm_min) / 1440;
+
+	position.origin.x=(-(sin_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.x - position.size.w/2;
+	position.origin.y=((cos_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.y - position.size.w/2;
+
+	layer_set_frame(text_layer_get_layer(layer_hour), position);
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 {
 	memcpy(&now, tick_time, sizeof(struct tm));
 
 	layer_mark_dirty(bitmap_layer_get_layer(layer_pointer));
 
+	snprintf(hour_string, 3, "%d", now.tm_hour);
 	strftime(minute_string, 3, "%M", &now);
 	strftime(date_string, 7, "%a %d", &now);
+
+	update_hours_position();
 }
 
 static void update_background(Layer *this, GContext *ctx)
@@ -112,7 +133,7 @@ static void window_main_load(Window *window)
 	Layer *root;
 
 	time_t t;
-	GSize ms, ds;
+	GSize ms, ds, hs;
 
 	root=window_get_root_layer(window_main);
 
@@ -168,6 +189,20 @@ static void window_main_load(Window *window)
 	text_layer_set_background_color(layer_date, GColorClear);
 	text_layer_set_text_color(layer_date, GColorWhite);
 	text_layer_set_text(layer_date, date_string);
+
+	hs=graphics_text_layout_get_content_size("00",
+		FONT_HOUR,
+		bounds,
+		GTextOverflowModeWordWrap,
+		GTextAlignmentCenter);
+
+	layer_hour=text_layer_create(GRect(0,0,hs.w,hs.h));
+	layer_add_child(root, text_layer_get_layer(layer_hour));
+
+	text_layer_set_font(layer_hour, FONT_HOUR);
+	text_layer_set_background_color(layer_hour, GColorClear);
+	text_layer_set_text_color(layer_hour, GColorWhite);
+	text_layer_set_text(layer_hour, hour_string);
 }
 
 static void window_main_unload(Window *window)
@@ -175,6 +210,8 @@ static void window_main_unload(Window *window)
 	bitmap_layer_destroy(layer_background);
 	bitmap_layer_destroy(layer_pointer);
 	text_layer_destroy(layer_minutes);
+	text_layer_destroy(layer_date);
+	text_layer_destroy(layer_hour);
 }
 
 /************************************************************************
