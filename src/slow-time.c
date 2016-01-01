@@ -8,7 +8,7 @@
 #define TRACK_INNER (center.x-TRACK_WIDTH)
 
 #define POINTER_WIDTH 30
-#define POINTER_HEIGHT 20
+#define POINTER_HEIGHT 18
 
 #define NUMERAL_OFFSET 10
 
