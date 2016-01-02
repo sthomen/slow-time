@@ -70,7 +70,8 @@ static GPathInfo *generate_offset_pointer()
 
 static void update_hours_position() {
 	GRect position=layer_get_bounds(text_layer_get_layer(layer_hour));
-	int32_t angle=TRIG_MAX_ANGLE * (now.tm_hour * 60 + now.tm_min) / 1440;
+//	int32_t angle=TRIG_MAX_ANGLE * (now.tm_hour * 60 + now.tm_min) / 1440;
+	int32_t angle=TRIG_MAX_ANGLE * now.tm_hour / 24;
 
 	position.origin.x=(-(sin_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.x - position.size.w/2;
 	position.origin.y=((cos_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.y - position.size.w/2;
