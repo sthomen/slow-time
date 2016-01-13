@@ -18,6 +18,8 @@
 
 #define HOUR_OFFSET (TRACK_INNER-10)
 
+#define BATTERY_BORDER 4
+
 #define FONT fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 #define FONT_HOUR fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD)
 #define FONT_MINUTES fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD)
@@ -39,6 +41,9 @@ GPathInfo *path_triangle_info;
 char hour_string[3];		// two digits and null
 char minute_string[3];		// two digits and null
 char date_string[7];		// three characters, space two digits and null
+
+static int8_t charge=0;
+static bool charging=false;
 
 struct tm now;
 
@@ -79,6 +84,20 @@ static void update_hours_position() {
 	layer_set_frame(text_layer_get_layer(layer_hour), position);
 }
 
+static void battery_handler(BatteryChargeState state)
+{
+
+	charge=state.charge_percent;
+	charging=state.is_charging;
+
+	layer_mark_dirty(bitmap_layer_get_layer(layer_background));
+}
+
+static void bluetooth_handler(bool connected)
+{
+	vibes_short_pulse();
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 {
 	memcpy(&now, tick_time, sizeof(struct tm));
@@ -94,6 +113,8 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed)
 
 static void update_background(Layer *this, GContext *ctx)
 {
+	int start_angle;
+
 	// draw background
 	graphics_context_set_fill_color(ctx, GColorBlack);
 	graphics_fill_rect(ctx, bounds, 0, 0);
@@ -104,6 +125,22 @@ static void update_background(Layer *this, GContext *ctx)
 
 	graphics_context_set_fill_color(ctx, GColorBlack);
 	graphics_fill_circle(ctx, center, TRACK_INNER);
+
+#ifdef PBL_COLOR
+	start_angle=180 - (charge * 3.6);
+
+	// draw battery state
+	graphics_context_set_fill_color(ctx, GColorOrange);
+	graphics_fill_radial(ctx,
+		GRect(	center.x-TRACK_OUTER+BATTERY_BORDER,
+			center.y-TRACK_OUTER+BATTERY_BORDER,
+			center.x+TRACK_OUTER-(BATTERY_BORDER*2),
+			center.x+TRACK_OUTER-(BATTERY_BORDER*2)),
+		GOvalScaleModeFitCircle,
+		TRACK_WIDTH-(BATTERY_BORDER*2),
+		DEG_TO_TRIGANGLE(start_angle),
+		DEG_TO_TRIGANGLE(180));
+#endif
 }
 
 static void update_pointer(Layer *this, GContext *ctx)
@@ -117,11 +154,16 @@ static void update_pointer(Layer *this, GContext *ctx)
 
 	path_triangle=gpath_create(path_triangle_info);
 
-	graphics_context_set_fill_color(ctx, GColorBlack);
-
 	gpath_rotate_to(path_triangle, TRIG_MAX_ANGLE / 1440 * total_minutes);
-	gpath_move_to(path_triangle, center);
 
+#ifdef PBL_COLOR
+	gpath_move_to(path_triangle, GPoint(center.x+2, center.y+2));
+	graphics_context_set_fill_color(ctx, GColorLightGray);
+	gpath_draw_filled(ctx, path_triangle);
+#endif
+
+	gpath_move_to(path_triangle, center);
+	graphics_context_set_fill_color(ctx, GColorBlack);
 	gpath_draw_filled(ctx, path_triangle);
 }
 
@@ -226,17 +268,26 @@ static void init()
 		.unload = window_main_unload
 	};
 
+	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+
+	battery_state_service_subscribe(battery_handler);
+
+	BatteryChargeState state=battery_state_service_peek();
+	charge=state.charge_percent;
+
+	bluetooth_connection_service_subscribe(bluetooth_handler);
+
 	window_main = window_create();
 	window_set_window_handlers(window_main, window_handlers);
 	window_stack_push(window_main, true);
-
-	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
 
 static void deinit()
 {
 	window_destroy(window_main);
 	tick_timer_service_unsubscribe();
+	battery_state_service_unsubscribe();
+	bluetooth_connection_service_unsubscribe();
 }
 
 int main(void)
