@@ -156,12 +156,6 @@ static void update_pointer(Layer *this, GContext *ctx)
 
 	gpath_rotate_to(path_triangle, TRIG_MAX_ANGLE / 1440 * total_minutes);
 
-#ifdef PBL_COLOR
-	gpath_move_to(path_triangle, GPoint(center.x+2, center.y+2));
-	graphics_context_set_fill_color(ctx, GColorLightGray);
-	gpath_draw_filled(ctx, path_triangle);
-#endif
-
 	gpath_move_to(path_triangle, center);
 	graphics_context_set_fill_color(ctx, GColorBlack);
 	gpath_draw_filled(ctx, path_triangle);
