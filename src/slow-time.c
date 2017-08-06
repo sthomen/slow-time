@@ -140,9 +140,14 @@ static void update_background(Layer *this, GContext *ctx)
 {
 	int battery_angle;
 	int steps_angle;
+	int steps_overflow=0;
 
-	battery_angle=180 - (charge * 3.6);
-	steps_angle=180 - (stepspercent * 3.6);
+	battery_angle=charge * 3.6;
+	steps_angle=stepspercent * 3.6;
+
+	if (stepspercent > 100) {
+		steps_overflow=(stepspercent - 100) * 3.6;
+	}
 
 	// draw background
 	graphics_context_set_fill_color(ctx, GColorBlack);
@@ -161,6 +166,8 @@ static void update_background(Layer *this, GContext *ctx)
 		DEG_TO_TRIGANGLE(360));
 
 
+	// the circles below are offset by 180 degrees so that they start at the bottom like the hours
+
 	// draw battery state
 #ifdef PBL_COLOR
 	graphics_context_set_fill_color(ctx, GColorOrange);
@@ -175,7 +182,7 @@ static void update_background(Layer *this, GContext *ctx)
 			center.y+TRACK_OUTER),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH,
-		DEG_TO_TRIGANGLE(battery_angle),
+		DEG_TO_TRIGANGLE(180 - battery_angle),
 		DEG_TO_TRIGANGLE(180));
 
 	// draw steps graph
@@ -192,7 +199,24 @@ static void update_background(Layer *this, GContext *ctx)
 			center.y+TRACK_OUTER-(TRACK_WIDTH*2)),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH,
-		DEG_TO_TRIGANGLE(steps_angle),
+		DEG_TO_TRIGANGLE(180 - steps_angle),
+		DEG_TO_TRIGANGLE(180));
+
+	// draw steps overflow
+#ifdef PBL_COLOR
+	graphics_context_set_fill_color(ctx, GColorIndigo);
+#else
+	graphics_context_set_fill_color(ctx, GColorWhite);
+#endif
+
+	graphics_fill_radial(ctx,
+		GRect(	center.x-TRACK_OUTER+TRACK_WIDTH,
+			center.y-TRACK_OUTER+TRACK_WIDTH,
+			center.x+TRACK_OUTER-(TRACK_WIDTH*2),
+			center.y+TRACK_OUTER-(TRACK_WIDTH*2)),
+		GOvalScaleModeFitCircle,
+		TRACK_WIDTH,
+		DEG_TO_TRIGANGLE(180 - steps_overflow),
 		DEG_TO_TRIGANGLE(180));
 }
 
