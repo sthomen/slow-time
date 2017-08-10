@@ -73,6 +73,7 @@ static void update_hours_position() {
 	GRect position=layer_get_bounds(text_layer_get_layer(layer_hour));
 //	int32_t angle=TRIG_MAX_ANGLE * (now.tm_hour * 60 + now.tm_min) / 1440;
 	int32_t angle=TRIG_MAX_ANGLE * now.tm_hour / 24;
+//	int32_t angle=TRIG_MAX_ANGLE * now.tm_sec / 60;
 
 	position.origin.x=(-(sin_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.x - position.size.w/2;
 	position.origin.y=((cos_lookup(angle) * HOUR_OFFSET) / TRIG_MAX_RATIO) + center.y - position.size.w/2;
@@ -109,16 +110,12 @@ static void health_handler(HealthEventType event, void *context) {
 	const HealthMetric metric = HealthMetricStepCount;
 	const HealthServiceTimeScope scope = HealthServiceTimeScopeDaily;
 
-	DEBUG_INFO("health_handler");
-
 	if (health_metric_available(metric, scope, start, end)) {
 
 		today = health_service_sum_today(metric);
 		average = health_service_sum_averaged(metric, start, end, scope);
 
 		stepspercent = (int32_t)(((float)today / (float)average) * 100.0);
-
-		DEBUG_INFO("health_handler: today: %d, average: %d, percent: %d", (int)today, (int)average, (int)stepspercent);
 	}
 }
 #endif
@@ -158,13 +155,12 @@ static void update_background(Layer *this, GContext *ctx)
 	graphics_fill_radial(ctx,
 		GRect(	center.x-TRACK_OUTER,
 			center.y-TRACK_OUTER,
-			center.x+TRACK_OUTER,
-			center.y+TRACK_OUTER),
+			TRACK_OUTER*2,
+			TRACK_OUTER*2),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH*2,
 		DEG_TO_TRIGANGLE(0),
 		DEG_TO_TRIGANGLE(360));
-
 
 	// the circles below are offset by 180 degrees so that they start at the bottom like the hours
 
@@ -178,8 +174,8 @@ static void update_background(Layer *this, GContext *ctx)
 	graphics_fill_radial(ctx,
 		GRect(	center.x-TRACK_OUTER,
 			center.y-TRACK_OUTER,
-			center.x+TRACK_OUTER,
-			center.y+TRACK_OUTER),
+			TRACK_OUTER*2,
+			TRACK_OUTER*2),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH,
 		DEG_TO_TRIGANGLE(180 - battery_angle),
@@ -195,8 +191,8 @@ static void update_background(Layer *this, GContext *ctx)
 	graphics_fill_radial(ctx,
 		GRect(	center.x-TRACK_OUTER+TRACK_WIDTH,
 			center.y-TRACK_OUTER+TRACK_WIDTH,
-			center.x+TRACK_OUTER-(TRACK_WIDTH*2),
-			center.y+TRACK_OUTER-(TRACK_WIDTH*2)),
+			(TRACK_OUTER*2)-(TRACK_WIDTH*2),
+			(TRACK_OUTER*2)-(TRACK_WIDTH*2)),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH,
 		DEG_TO_TRIGANGLE(180 - steps_angle),
@@ -212,8 +208,8 @@ static void update_background(Layer *this, GContext *ctx)
 	graphics_fill_radial(ctx,
 		GRect(	center.x-TRACK_OUTER+TRACK_WIDTH,
 			center.y-TRACK_OUTER+TRACK_WIDTH,
-			center.x+TRACK_OUTER-(TRACK_WIDTH*2),
-			center.y+TRACK_OUTER-(TRACK_WIDTH*2)),
+			(TRACK_OUTER*2)-(TRACK_WIDTH*2),
+			(TRACK_OUTER*2)-(TRACK_WIDTH*2)),
 		GOvalScaleModeFitCircle,
 		TRACK_WIDTH,
 		DEG_TO_TRIGANGLE(180 - steps_overflow),
@@ -227,10 +223,12 @@ static void update_pointer(Layer *this, GContext *ctx)
 	GPath *path_triangle_inset=NULL;
 
 	total_minutes=now.tm_hour * 60 + now.tm_min;
+//	total_minutes=now.tm_sec;
 
 	path_triangle=gpath_create(generate_offset_pointer(0));
 
 	gpath_rotate_to(path_triangle, TRIG_MAX_ANGLE / 1440 * total_minutes);
+//	gpath_rotate_to(path_triangle, TRIG_MAX_ANGLE * total_minutes / 60);
 	gpath_move_to(path_triangle, center);
 
 	graphics_context_set_fill_color(ctx, GColorBlack);
@@ -239,6 +237,7 @@ static void update_pointer(Layer *this, GContext *ctx)
 	path_triangle_inset=gpath_create(generate_offset_pointer(5));
 
 	gpath_rotate_to(path_triangle_inset, TRIG_MAX_ANGLE / 1440 * total_minutes);
+//	gpath_rotate_to(path_triangle_inset, TRIG_MAX_ANGLE * total_minutes / 60);
 	gpath_move_to(path_triangle_inset, center);
 
 	graphics_context_set_fill_color(ctx, GColorWhite);
@@ -344,7 +343,8 @@ static void init()
 		.unload = window_main_unload
 	};
 
-	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+	tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+//	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
 	battery_state_service_subscribe(battery_handler);
 
