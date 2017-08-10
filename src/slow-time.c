@@ -343,8 +343,8 @@ static void init()
 		.unload = window_main_unload
 	};
 
-	tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
-//	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+//	tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
 	battery_state_service_subscribe(battery_handler);
 
