@@ -17,4 +17,4 @@ average you have exceeded (indigo on colour, white on b/w pebbles).
 
 ## Screenshot
 
-![Version 1.0 screenshot](http://sthomen.github.io/slow-time/screenshots/version-1.0.png "Version 1.0 Screenshot")
+![Version 1.2 screenshot](http://sthomen.github.io/slow-time/screenshots/version-1.2.png "Version 1.2 Screenshot")
